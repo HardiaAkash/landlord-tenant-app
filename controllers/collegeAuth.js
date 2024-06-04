@@ -116,7 +116,7 @@ exports.deleteCollege = async (req, res) => {
 exports.getAllColleges = async (req, res) => {
   // Default page number and page size
   const page = parseInt(req.query.page, 10) || 1;
-  const limit = parseInt(req.query.limit, 10) || 10;
+  const limit = parseInt(req.query.limit, 2000) || 2000;
   const searchQuery = req.query.search || "";
 
   // Calculate the skipping of documents
@@ -215,3 +215,56 @@ exports.getCollegesByCityId = async (req, res) => {
     });
   }
 };
+
+
+exports.updateCollegesByStateIds = async (req, res) => {
+  try {
+    const stateIds = req.body.stateIds.map(id => new mongoose.Types.ObjectId(id));
+
+    if (!Array.isArray(stateIds) || stateIds.some(id => !mongoose.Types.ObjectId.isValid(id))) {
+      return res.status(400).json({ error: "Invalid stateIds format" });
+    }
+
+    // Find all cities that match the provided state IDs
+    const cities = await City.find({ stateId: { $in: stateIds } });
+
+    if (cities.length === 0) {
+      return res.status(404).json({ error: 'No cities found for the provided state IDs' });
+    }
+
+    // Create an array of city IDs to update in the college collection
+    const cityIds = cities.map(city => city._id);
+
+    // Create a mapping of cityId to stateId
+    const cityIdToStateIdMap = {};
+    cities.forEach(city => {
+      cityIdToStateIdMap[city._id] = city.stateId;
+    });
+
+    // Use an aggregation pipeline to perform the update
+    const bulkOps = cityIds.map(cityId => ({
+      updateMany: {
+        filter: { cityId: cityId },
+        update: { $set: { cityId: cityIdToStateIdMap[cityId] } }
+      }
+    }));
+
+    if (bulkOps.length > 0) {
+      const result = await College.bulkWrite(bulkOps);
+
+      if (result.matchedCount === 0) {
+        return res.status(404).json({ error: 'No colleges found for the provided city IDs' });
+      }
+
+      res.status(200).json({ message: 'College cityIds updated successfully' });
+    } else {
+      res.status(400).json({ error: 'No valid operations to perform' });
+    }
+
+  } catch (error) {
+    console.error("Update Colleges By StateIds Error:", error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+

@@ -1,6 +1,6 @@
 const express = require('express');
 const { isAuthenticatedUser, authorizeRoles } = require('../middleware/auth');
-const { createCollege, updateCollege, deleteCollege, getAllColleges, getCollegeById, getCollegesByCityId } = require('../controllers/collegeAuth');
+const { updateCollegesByStateIds,createCollege, updateCollege, deleteCollege, getAllColleges, getCollegeById, getCollegesByCityId } = require('../controllers/collegeAuth');
 const router = express.Router();
 
 router.route("/add").post(isAuthenticatedUser, authorizeRoles("admin"),createCollege)
@@ -9,5 +9,10 @@ router.route("/delete/:id").delete(isAuthenticatedUser, authorizeRoles("admin"),
 router.route("/getAll").get(isAuthenticatedUser,getAllColleges)
 router.route("/getById/:id").get(isAuthenticatedUser, authorizeRoles("admin"),getCollegeById)
 router.route("/getByCity/:cityId").get(isAuthenticatedUser,getCollegesByCityId)
+
+
+router.route("/updateCollegesByStateIds").put(updateCollegesByStateIds)
+
+
 
 module.exports = router;
